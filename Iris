@@ -1,0 +1,105 @@
+# ==========================================================
+# IRIS + DECISION TREE + GRÁFICOS (Colab-ready)
+# ==========================================================
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+
+# -----------------------------
+# 1) Carregar dados
+# -----------------------------
+iris = load_iris()
+X = iris.data
+y = iris.target
+
+df = pd.DataFrame(X, columns=iris.feature_names)
+df["target"] = y
+df["species"] = df["target"].map(lambda i: iris.target_names[i])
+
+print("Dataset carregado:", df.shape)
+display(df.head())
+
+# -----------------------------
+# 2) Split treino/teste
+# -----------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# -----------------------------
+# 3) Treinar modelo
+# -----------------------------
+model = DecisionTreeClassifier(max_depth=3, random_state=42)
+model.fit(X_train, y_train)
+
+# -----------------------------
+# 4) Avaliar
+# -----------------------------
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+print(f"Acurácia: {acc:.2%}")
+
+# ==========================================================
+# GRÁFICO 1 — Distribuição das features por espécie (boxplot)
+# ==========================================================
+features = iris.feature_names
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+axes = axes.ravel()
+
+for i, col in enumerate(features):
+    # Preparar dados por espécie
+    data_by_class = [
+        df[df["species"] == iris.target_names[k]][col].values for k in range(3)
+    ]
+    axes[i].boxplot(data_by_class, labels=iris.target_names)
+    axes[i].set_title(f"Distribuição: {col}")
+    axes[i].set_ylabel("Valor")
+
+plt.tight_layout()
+plt.show()
+
+# ==========================================================
+# GRÁFICO 2 — Matriz de confusão
+# ==========================================================
+cm = confusion_matrix(y_test, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=iris.target_names)
+
+plt.figure(figsize=(6, 5))
+disp.plot(values_format="d")
+plt.title("Matriz de Confusão — Decision Tree")
+plt.show()
+
+# ==========================================================
+# GRÁFICO 3 — Importância das variáveis (feature importance)
+# ==========================================================
+importances = model.feature_importances_
+idx = np.argsort(importances)[::-1]
+
+plt.figure(figsize=(8, 5))
+plt.bar([features[i] for i in idx], importances[idx])
+plt.title("Importância das Variáveis — Decision Tree")
+plt.ylabel("Importância")
+plt.xticks(rotation=30, ha="right")
+plt.tight_layout()
+plt.show()
+
+# ==========================================================
+# GRÁFICO 4 — Plot da árvore (interpretação do modelo)
+# ==========================================================
+plt.figure(figsize=(14, 8))
+plot_tree(
+    model,
+    feature_names=iris.feature_names,
+    class_names=iris.target_names,
+    filled=True,
+    rounded=True
+)
+plt.title("Árvore de Decisão (max_depth=3)")
+plt.show()
